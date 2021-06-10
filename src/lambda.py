@@ -9,6 +9,7 @@ from urllib.parse import unquote_plus
 
 import boto3
 
+FORMAT_JSON = environ["FORMAT"] == "JSON"
 LOG_GROUP_NAME = environ["LOG_GROUP_NAME"]
 
 
@@ -204,20 +205,23 @@ def parse_iso8601(string):
     return datetime.strptime(string, "%Y-%m-%dT%H:%M:%S.%fZ")
 
 
-def read_log_entries(bucket, key):
+def read_log_entries(bucket, key, parse):
     """
     Reads ALB log entries from an S3 object.
-    Generates a dictionary for each log line.
+    Optionally parses each log entry into a dictionary.
 
     """
 
     with NamedTemporaryFile() as temp_file:
         s3_client.download_file(bucket, key, temp_file.name)
         with gzip.open(temp_file.name, mode="rt") as extracted_file:
-            reader = csv.DictReader(
-                extracted_file, fieldnames=FIELD_NAMES, delimiter=" "
-            )
-            yield from reader
+            if parse:
+                reader = csv.DictReader(
+                    extracted_file, fieldnames=FIELD_NAMES, delimiter=" "
+                )
+                yield from reader
+            else:
+                yield from extracted_file
 
 
 def handler(event, context):
@@ -236,15 +240,23 @@ def handler(event, context):
         # So create a list with every log entry and sort them
         # before pushing them to CloudWatch.
 
-        parsed_entries = []
-        for entry in read_log_entries(bucket, key):
-            message = json.dumps(entry)
-            timestamp = int(parse_iso8601(entry["timestamp"]).timestamp() * 1000)
-            parsed_entries.append((timestamp, message))
+        entries = []
 
-        parsed_entries.sort()
+        if FORMAT_JSON:
+            for entry in read_log_entries(bucket, key, parse=True):
+                message = json.dumps(entry, separators=(",", ":"))
+                timestamp = int(parse_iso8601(entry["timestamp"]).timestamp() * 1000)
+                entries.append((timestamp, message))
+        else:
+            for entry in read_log_entries(bucket, key, parse=False):
+                timestamp = int(
+                    parse_iso8601(entry.split(" ", 2)[1]).timestamp() * 1000
+                )
+                entries.append((timestamp, entry))
 
-        for (timestamp, message) in parsed_entries:
+        entries.sort()
+
+        for (timestamp, message) in entries:
             try:
                 log_stream.write(message, timestamp)
             except Full:

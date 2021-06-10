@@ -27,6 +27,7 @@ module "lambda" {
 
   environment = {
     variables = {
+      FORMAT         = var.format_json ? "JSON" : "RAW"
       LOG_GROUP_NAME = var.log_group_name
     }
   }

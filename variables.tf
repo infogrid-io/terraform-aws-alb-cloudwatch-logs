@@ -11,6 +11,12 @@ variable "log_group_name" {
   type = string
 }
 
+variable "format_json" {
+  description = "Convert the logs to JSON format."
+  type        = bool
+  default     = false
+}
+
 variable "memory_size" {
   description = "Memory size for Lambda function"
   type        = number
