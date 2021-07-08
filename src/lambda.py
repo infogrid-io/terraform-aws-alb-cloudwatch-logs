@@ -264,3 +264,9 @@ def handler(event, context):
                 log_stream.write(message, timestamp)
 
         log_stream.flush()
+
+
+if environ.get("AWS_CODEGURU_PROFILER_GROUP_ARN"):
+    from codeguru_profiler_agent import with_lambda_profiler
+
+    handler = with_lambda_profiler()(handler)

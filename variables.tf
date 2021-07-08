@@ -43,3 +43,9 @@ variable "ok_actions" {
   type    = list(string)
   default = []
 }
+
+variable "codeguru_enabled" {
+  description = "Enables CodeGuru Profiler for the Lambda function. Generally only useful when developing or debugging this module."
+  type        = bool
+  default     = false
+}
