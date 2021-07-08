@@ -2,13 +2,32 @@ data "aws_caller_identity" "current" {}
 
 data "aws_region" "current" {}
 
+locals {
+  codeguru_layer = "arn:aws:lambda:${data.aws_region.current.name}:157417159150:layer:AWSCodeGuruProfilerPythonAgentLambdaLayer:8"
+  function_name  = coalesce(var.function_name, "${var.bucket_name}-to-cloudwatch-logs")
+}
+
+resource "aws_cloudformation_stack" "codeguru" {
+  count = var.codeguru_enabled ? 1 : 0
+
+  name       = "${local.function_name}-codeguru"
+  on_failure = "DELETE"
+
+  parameters = {
+    LambdaFunctionName    = local.function_name
+    LambdaFunctionRoleArn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/${local.function_name}"
+  }
+
+  template_body = file("${path.module}/codeguru.cfn.yaml")
+}
+
 module "lambda" {
   source  = "raymondbutcher/lambda-builder/aws"
   version = "1.1.0"
 
-  function_name = coalesce(var.function_name, "${var.bucket_name}-to-cloudwatch-logs")
+  function_name = local.function_name
   handler       = "lambda.handler"
-  runtime       = "python3.7"
+  runtime       = "python3.8"
   memory_size   = var.memory_size
   timeout       = var.timeout
 
@@ -27,10 +46,14 @@ module "lambda" {
 
   environment = {
     variables = {
-      FORMAT         = var.format_json ? "JSON" : "RAW"
-      LOG_GROUP_NAME = var.log_group_name
+      AWS_LAMBDA_EXEC_WRAPPER         = var.codeguru_enabled ? "/opt/codeguru_profiler_lambda_exec" : ""
+      AWS_CODEGURU_PROFILER_GROUP_ARN = var.codeguru_enabled ? aws_cloudformation_stack.codeguru[0].outputs.GroupArn : ""
+      FORMAT                          = var.format_json ? "JSON" : "RAW"
+      LOG_GROUP_NAME                  = var.log_group_name
     }
   }
+
+  layers = var.codeguru_enabled ? [local.codeguru_layer] : []
 }
 
 data "aws_iam_policy_document" "lambda" {

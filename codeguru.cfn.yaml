@@ -1,0 +1,19 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: CodeGuru Profiler for ALB CloudWatch Logs Lambda function
+Parameters:
+  LambdaFunctionName:
+    Type: String
+  LambdaFunctionRoleArn:
+    Type: String
+Resources:
+  Group:
+    Type: AWS::CodeGuruProfiler::ProfilingGroup
+    Properties: 
+      AgentPermissions:
+        Principals:
+          - !Ref LambdaFunctionRoleArn
+      ComputePlatform: AWSLambda
+      ProfilingGroupName: !Ref LambdaFunctionName
+Outputs:
+  GroupArn:
+    Value: !GetAtt Group.Arn
