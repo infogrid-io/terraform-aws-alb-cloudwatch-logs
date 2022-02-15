@@ -55,7 +55,7 @@ When using `format_json = false` (the default), the following query may be usefu
 
 ```
 fields @timestamp, @message
-| parse '* * * *:* *:* * * * * * * * "* * *" "*" * * * "*" "*" "*" * * "*" "*" "*" "*" "*" "*" "*"' as type, time, elb, client, client_port, target, target_port, request_processing_time, target_processing_time, response_processing_time, elb_status_code, target_status_code, received_bytes, sent_bytes, request_verb, request_url, request_proto, user_agent, ssl_cipher, ssl_protocol, target_group_arn, trace_id, domain_name, chosen_cert_arn, matched_rule_priority, request_creation_time, actions_executed, redirect_url, error_reason, target_port_list, target_status_code_list, classification, classification_reason
+| parse '* * * * * * * * * * * * "* * *" "*" * * * "*" "*" "*" * * "*" "*" "*" "*" "*" "*" "*"' as type, time, elb, client, target, request_processing_time, target_processing_time, response_processing_time, elb_status_code, target_status_code, received_bytes, sent_bytes, request_verb, request_url, request_proto, user_agent, ssl_cipher, ssl_protocol, target_group_arn, trace_id, domain_name, chosen_cert_arn, matched_rule_priority, request_creation_time, actions_executed, redirect_url, error_reason, target_port_list, target_status_code_list, classification, classification_reason
 | sort @timestamp desc
 | limit 20
 | display request_url, elb_status_code
